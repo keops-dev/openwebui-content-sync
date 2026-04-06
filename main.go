@@ -111,7 +111,11 @@ func main() {
 	sched := scheduler.New(cfg.Schedule.Interval, adapters, syncManager)
 
 	// Start health check server
-	healthServer := health.NewServer(8080)
+	healthPort := cfg.Health.Port
+	if healthPort == 0 {
+		healthPort = 8080 // Default port
+	}
+	healthServer := health.NewServer(healthPort)
 	go func() {
 		if err := healthServer.Start(); err != nil {
 			logrus.Errorf("Health server error: %v", err)

@@ -12,6 +12,7 @@ import (
 type Config struct {
 	LogLevel     string            `yaml:"log_level"`
 	Schedule     ScheduleConfig    `yaml:"schedule"`
+	Health       HealthConfig      `yaml:"health"`
 	Storage      StorageConfig     `yaml:"storage"`
 	OpenWebUI    OpenWebUIConfig   `yaml:"openwebui"`
 	GitHub       GitHubConfig      `yaml:"github"`
@@ -24,6 +25,11 @@ type Config struct {
 // ScheduleConfig defines the sync schedule
 type ScheduleConfig struct {
 	Interval time.Duration `yaml:"interval"`
+}
+
+// ScheduleConfig defines the sync schedule
+type HealthConfig struct {
+	Port int `yaml:"port"`
 }
 
 // StorageConfig defines local storage settings

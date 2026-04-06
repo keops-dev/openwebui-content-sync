@@ -7,6 +7,10 @@ log_level: info
 schedule:
   interval: 1h  # Options: 30m, 1h, 2h, 6h, 12h, 24h
 
+# Health server configuration
+health:
+  port: 8080  # Port for health server (default: 8080)
+
 # Local storage configuration
 storage:
   path: /data  # Path where files will be stored locally
