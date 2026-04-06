@@ -14,11 +14,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const PageSize = 30
+
 // Client represents the OpenWebUI API client
 type Client struct {
 	baseURL string
 	apiKey  string
 	client  *http.Client
+}
+
+type FilesResponse struct {
+	Items      []*File `json:"items"`
+	TotalCount int     `json:"total"`
 }
 
 // File represents a file in OpenWebUI
@@ -41,6 +48,12 @@ type File struct {
 	Status        bool    `json:"status"`
 	Path          string  `json:"path"`
 	AccessControl *string `json:"access_control"`
+}
+
+// KnowledgeResponse represents the response structure for listing knowledge sources from OpenWebUI
+type KnowledgeResponse struct {
+	Items      []*Knowledge `json:"items"`
+	TotalCount int          `json:"total"`
 }
 
 // Knowledge represents a knowledge source in OpenWebUI
@@ -216,12 +229,12 @@ func (c *Client) ListKnowledge(ctx context.Context) ([]*Knowledge, error) {
 		return nil, fmt.Errorf("list knowledge failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var knowledge []*Knowledge
-	if err := json.NewDecoder(resp.Body).Decode(&knowledge); err != nil {
+	var knowledgeResponse *KnowledgeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&knowledgeResponse); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return knowledge, nil
+	return knowledgeResponse.Items, nil
 }
 
 // AddFileToKnowledge adds a file to a knowledge source
@@ -481,11 +494,39 @@ func (c *Client) DeleteFile(ctx context.Context, fileID string) error {
 	return nil
 }
 
-// GetKnowledgeFiles retrieves files from a specific knowledge source
+// GetKnowledgeFiles retrieves files from a specific knowledge source with pagination support
 func (c *Client) GetKnowledgeFiles(ctx context.Context, knowledgeID string) ([]*File, error) {
-	url := fmt.Sprintf("%s/api/v1/knowledge/", c.baseURL)
+	var allFiles []*File
+	page := 0
 
-	logrus.Debugf("Getting files from knowledge source: %s", knowledgeID)
+	for {
+		files, err := c.getKnowledgeFilesPage(ctx, knowledgeID, page)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(files) == 0 {
+			break
+		}
+
+		allFiles = append(allFiles, files...)
+
+		// If we got fewer files than the page size, we've reached the last page
+		if len(files) < PageSize {
+			break
+		}
+
+		page++
+	}
+
+	return allFiles, nil
+}
+
+// getKnowledgeFilesPage retrieves a specific page of files from a knowledge source
+func (c *Client) getKnowledgeFilesPage(ctx context.Context, knowledgeID string, page int) ([]*File, error) {
+	url := fmt.Sprintf("%s/api/v1/knowledge/%s/files?page=%d", c.baseURL, knowledgeID, page)
+
+	logrus.Debugf("Getting files from knowledge source: %s (page %d)", knowledgeID, page)
 	logrus.Debugf("Knowledge files URL: %s", url)
 	logrus.Debugf("Base URL: %s", c.baseURL)
 	logrus.Debugf("Context: %+v", ctx)
@@ -539,44 +580,12 @@ func (c *Client) GetKnowledgeFiles(ctx context.Context, knowledgeID string) ([]*
 	//logrus.Debugf("Knowledge files response body: %s", string(body))
 	logrus.Debugf("Response body length: %d bytes", len(body))
 
-	var knowledgeList []*Knowledge
-	if err := json.Unmarshal(body, &knowledgeList); err != nil {
+	var response *FilesResponse
+	if err := json.Unmarshal(body, &response); err != nil {
 		logrus.Errorf("Failed to decode knowledge list response: %v", err)
 		//logrus.Errorf("Response body was: %s", string(body))
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	//logrus.Debugf("Successfully decoded %d knowledge sources", len(knowledgeList))
-	for i, knowledge := range knowledgeList {
-		logrus.Debugf("Knowledge[%d]: ID=%s, Name=%s, Files count=%d", i, knowledge.ID, knowledge.Name, len(knowledge.Files))
-	}
-
-	// Find the specific knowledge source
-	var targetKnowledge *Knowledge
-	for _, knowledge := range knowledgeList {
-		logrus.Debugf("Checking knowledge ID: %s (looking for: %s)", knowledge.ID, knowledgeID)
-		if knowledge.ID == knowledgeID {
-			targetKnowledge = knowledge
-			logrus.Debugf("Found matching knowledge source: %s", knowledgeID)
-			break
-		}
-	}
-
-	if targetKnowledge == nil {
-		//logrus.Warnf("Knowledge source %s not found in %d available sources", knowledgeID, len(knowledgeList))
-		logrus.Debugf("Available knowledge source IDs: %v", func() []string {
-			ids := make([]string, len(knowledgeList))
-			for i, k := range knowledgeList {
-				ids[i] = k.ID
-			}
-			return ids
-		}())
-		return []*File{}, nil
-	}
-
-	logrus.Debugf("Successfully retrieved %d files from knowledge source %s", len(targetKnowledge.Files), knowledgeID)
-	for i, file := range targetKnowledge.Files {
-		logrus.Debugf("File[%d]: ID=%s, Filename=%s, Status=%t", i, file.ID, file.Filename, file.Status)
-	}
-	return targetKnowledge.Files, nil
+	return response.Items, nil
 }

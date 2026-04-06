@@ -173,6 +173,11 @@ func TestClient_ListKnowledge(t *testing.T) {
 		},
 	}
 
+	expectedResponse := KnowledgeResponse{
+		Items:      expectedKnowledge,
+		TotalCount: 1,
+	}
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			t.Errorf("Expected GET method, got %s", r.Method)
@@ -185,7 +190,7 @@ func TestClient_ListKnowledge(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(expectedKnowledge)
+		json.NewEncoder(w).Encode(expectedResponse)
 	}))
 	defer server.Close()
 
