@@ -16,6 +16,7 @@ type Config struct {
 	Storage      StorageConfig     `yaml:"storage"`
 	OpenWebUI    OpenWebUIConfig   `yaml:"openwebui"`
 	GitHub       GitHubConfig      `yaml:"github"`
+	GitLab       GitLabConfig      `yaml:"gitlab"`
 	Confluence   ConfluenceConfig  `yaml:"confluence"`
 	Jira         JiraConfig        `yaml:"jira"`
 	LocalFolders LocalFolderConfig `yaml:"local_folders"`
@@ -46,6 +47,7 @@ type OpenWebUIConfig struct {
 // RepositoryMapping defines a mapping between a GitHub repository and a knowledge base
 type RepositoryMapping struct {
 	Repository  string `yaml:"repository"` // Format: "owner/repo"
+	Branch      string `yaml:"branch"`     // Optional branch name
 	KnowledgeID string `yaml:"knowledge_id"`
 }
 
@@ -70,6 +72,14 @@ type LocalFolderMapping struct {
 // GitHubConfig defines GitHub adapter settings
 type GitHubConfig struct {
 	Enabled  bool                `yaml:"enabled"`
+	Token    string              `yaml:"token"`
+	Mappings []RepositoryMapping `yaml:"mappings"` // Per-repository knowledge mappings
+}
+
+// GitLabConfig defines GitLab adapter settings
+type GitLabConfig struct {
+	Enabled  bool                `yaml:"enabled"`
+	BaseURL  string              `yaml:"base_url"`
 	Token    string              `yaml:"token"`
 	Mappings []RepositoryMapping `yaml:"mappings"` // Per-repository knowledge mappings
 }

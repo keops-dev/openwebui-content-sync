@@ -63,6 +63,15 @@ func main() {
 		adapters = append(adapters, githubAdapter)
 	}
 
+	// Add GitLab adapter if configured
+	if cfg.GitLab.Enabled {
+		gitlabAdapter, err := adapter.NewGitLabAdapter(cfg.GitLab)
+		if err != nil {
+			logrus.Fatalf("Failed to create GitLab adapter: %v", err)
+		}
+		adapters = append(adapters, gitlabAdapter)
+	}
+
 	// Add Confluence adapter if configured
 	if cfg.Confluence.Enabled {
 		confluenceAdapter, err := adapter.NewConfluenceAdapter(cfg.Confluence)
